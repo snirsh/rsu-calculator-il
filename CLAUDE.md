@@ -71,7 +71,7 @@ sandboxes — the jsdom layer covers UI verification when they are.
 
 ## Deployment
 
-`.github/workflows/deploy.yml` builds on push to `main` and publishes `dist/` to
+`.github/workflows/deploy.yml` builds on push to `master` and publishes `dist/` to
 GitHub Pages. The base path is set to `/<repo>/` via `BASE_PATH`. Enable Pages
 with "GitHub Actions" as the source in repo settings.
 

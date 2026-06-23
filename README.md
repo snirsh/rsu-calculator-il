@@ -38,7 +38,7 @@ npm run build    # production build → dist/
 
 ## Deploying to GitHub Pages
 
-1. Push to `main`.
+1. Push to `master`.
 2. In the repo settings, set **Pages → Build and deployment → Source** to
    **GitHub Actions**.
 3. The included workflow (`.github/workflows/deploy.yml`) builds and publishes
