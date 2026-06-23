@@ -93,13 +93,43 @@ describe("RSU worked example (100 shares, sold before the 2-year mark)", () => {
     expect(result.netToBank + result.netToSalary).toBeCloseTo(result.totalNet, 4);
   });
 
-  it("a 2-year break-even price is solved for and is positive", () => {
-    // Before the 2-year mark the engine solves for the future price at which a
-    // qualified sale matches the baseline. We assert only that a positive
-    // solution exists — the exact figure is a property of the engine's solver,
-    // not an externally supplied reference value.
+  it("2-year break-even price = ₪48,181 / 260.155 ≈ $185.20", () => {
+    // Baseline: selling now is NOT qualified, so the whole benefit is ordinary
+    // income and the net is ₪36,561 (= net-to-bank + net-to-salary above).
+    //
+    // A qualified sale at a future price P (grant price still $150) nets, in ILS:
+    //   gross           = 350·P
+    //   fees            = (0.07%·100P + 0.60%·100P + $20)·3.5 = 2.345·P + 70
+    //   income portion  = 150·100·3.5 = 52,500  ⇒ marginal 35% = 18,375
+    //                                            ⇒ bituah  12% =  6,300
+    //   capital portion = 350·P − 52,500         ⇒ capital 25% = 87.5·P − 13,125
+    //   net(P) = 350P − (2.345P + 70) − (18,375 + 6,300 + 87.5P − 13,125)
+    //          = 260.155·P − 11,620
+    // Setting net(P) = 36,561 gives P = 48,181 / 260.155 ≈ 185.2011.
+    //
+    // (Regression guard: a past bug computed the baseline as if it were already
+    // qualified, collapsing the break-even onto the current price of $200.)
     expect(result.breakEvenPrice2y).not.toBeNull();
-    expect(result.breakEvenPrice2y!).toBeGreaterThan(0);
+    expect(result.breakEvenPrice2y!).toBeCloseTo(48_181 / 260.155, 4);
+
+    // By construction, a qualified sale at the break-even price nets exactly the
+    // non-qualified "sell now" total.
+    const atBreakEven = computeRsuGrant(
+      {
+        shares: 100,
+        stockPrice: result.breakEvenPrice2y!,
+        grantPrice: 150,
+        grantDate: new Date("2025-09-01"),
+        fxRate: 3.5,
+        isTase: false,
+        whatIf2Years: true,
+        workplaceMonthlySalary: 30_000,
+        fees: DEFAULT_FEES,
+      },
+      profile,
+      asOf,
+    );
+    expect(atBreakEven.totalNet).toBeCloseTo(result.totalNet, 2);
   });
 
   it("monthly miluim & maternity pay use the 3-month base, capped at the NI ceiling", () => {

@@ -74,6 +74,9 @@ export function computeRsuGrant(
   input: RsuGrantInput,
   profile: TaxProfile,
   asOf: Date = new Date(),
+  // Internal: the break-even solver re-runs this computation many times over and
+  // does not need (and must not trigger) a nested break-even, which would recurse.
+  withBreakEven = true,
 ): RsuGrantResult {
   const yc = yearConstants(profile.year);
   const fx = input.isTase ? 1 : input.fxRate;
@@ -152,7 +155,9 @@ export function computeRsuGrant(
     netToBank,
     netToSalary,
     isRefund: false,
-    breakEvenPrice2y: breakEvenPrice2y(input, profile, asOf),
+    breakEvenPrice2y: withBreakEven
+      ? breakEvenPrice2y(input, profile, asOf)
+      : null,
   };
 }
 
@@ -168,17 +173,25 @@ function breakEvenPrice2y(
 ): number | null {
   if (input.whatIf2Years || holdingQualified(input.grantDate, asOf)) return null;
 
+  // The early return above guarantees the grant is still non-qualified, so
+  // selling now taxes the whole benefit as ordinary income — that is the
+  // baseline we compare a future qualified sale against.
   const netNow = computeRsuGrant(
-    { ...input, whatIf2Years: false, grantDate: futureDate() },
+    { ...input, whatIf2Years: false },
     profile,
     asOf,
+    false,
   ).totalNet;
 
   // Solve for the price P such that the qualified-sale net equals netNow.
   // Net(P) is piecewise-linear in P, so a monotonic bisection is robust.
   const f = (price: number) =>
-    computeRsuGrant({ ...input, stockPrice: price, whatIf2Years: true }, profile, asOf)
-      .totalNet - netNow;
+    computeRsuGrant(
+      { ...input, stockPrice: price, whatIf2Years: true },
+      profile,
+      asOf,
+      false,
+    ).totalNet - netNow;
 
   let lo = 0;
   let hi = Math.max(input.stockPrice * 4, input.grantPrice * 4, 1);
@@ -189,12 +202,6 @@ function breakEvenPrice2y(
     else lo = mid;
   }
   return (lo + hi) / 2;
-}
-
-// A grant date far in the past, so the "sell now" branch is treated as
-// non-qualified regardless of the real grant date.
-function futureDate(): Date {
-  return new Date(1900, 0, 1);
 }
 
 export interface RsuCombinedResult {
