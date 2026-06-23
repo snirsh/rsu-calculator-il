@@ -31,8 +31,8 @@ export function App() {
     <div className="app">
       <header className="masthead">
         <div className="masthead-text">
-          <span className="eyebrow">Section 102 · Capital track</span>
-          <h1>Israeli RSU &amp; ESPP Tax Calculator</h1>
+          <span className="eyebrow">Israeli RSU &amp; ESPP · Section 102 capital track</span>
+          <h1>Tlush</h1>
           <p className="lede">
             See what actually reaches your bank. Your RSU or ESPP sale, run
             through every Israeli tax layer — income tax, Bituah Leumi, capital

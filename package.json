@@ -1,5 +1,5 @@
 {
-  "name": "rsu-espp-tax-calculator-il",
+  "name": "tlush",
   "version": "1.0.0",
   "private": true,
   "description": "Israeli RSU & ESPP after-tax calculator (Section 102 capital track).",

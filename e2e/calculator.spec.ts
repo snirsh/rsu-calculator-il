@@ -9,7 +9,7 @@ import { expect, test } from "@playwright/test";
 test("loads and shows the calculator", async ({ page }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /RSU & ESPP Tax Calculator/i }),
+    page.getByRole("heading", { name: /Tlush/i }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "RSU" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "ESPP" })).toBeVisible();

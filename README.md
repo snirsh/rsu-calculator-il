@@ -1,4 +1,6 @@
-# Israeli RSU & ESPP Tax Calculator
+# Tlush
+
+*Israeli RSU & ESPP after-tax calculator — Section 102 capital track.*
 
 A free, open-source calculator that estimates your **after-tax proceeds** when
 selling **RSUs** or **ESPP** shares in Israel under **Section 102** of the Income
