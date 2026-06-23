@@ -56,11 +56,18 @@ public/tickers.json Offline symbol-autocomplete fallback list.
 ```bash
 npm install      # or: npm ci
 npm run dev      # local dev server
-npm test         # vitest (run once)
+npm test         # vitest (run once): engine + jsdom UI-interaction tests
+npm run test:e2e # playwright browser smoke tests (needs: npx playwright install)
 npm run lint     # eslint
 npm run typecheck
 npm run build    # tsc + vite build → dist/
 ```
+
+Test layers: pure-engine unit tests + reference fixtures (`src/lib/tax/__tests__`),
+jsdom UI-interaction tests that drive the real React app offline
+(`src/__tests__/app.dom.test.tsx`), and Playwright e2e smoke tests in a real
+browser (`e2e/`, run by the `e2e` CI job). Browser downloads may be blocked in
+sandboxes — the jsdom layer covers UI verification when they are.
 
 ## Deployment
 
