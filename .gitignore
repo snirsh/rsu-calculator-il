@@ -5,6 +5,7 @@ coverage/
 .DS_Store
 .vite/
 npm-debug.log*
+bun-debug.log*
 test-results/
 playwright-report/
 .playwright/

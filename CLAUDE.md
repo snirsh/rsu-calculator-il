@@ -53,15 +53,21 @@ public/tickers.json Offline symbol-autocomplete fallback list.
 
 ## Commands
 
+This project uses **bun** as its package manager and script runner. The Node
+version is pinned in `.nvmrc`; the bun version in `.bun-version`.
+
 ```bash
-npm install      # or: npm ci
-npm run dev      # local dev server
-npm test         # vitest (run once): engine + jsdom UI-interaction tests
-npm run test:e2e # playwright browser smoke tests (needs: npx playwright install)
-npm run lint     # eslint
-npm run typecheck
-npm run build    # tsc + vite build → dist/
+bun install          # or: bun install --frozen-lockfile (CI)
+bun run dev          # local dev server
+bun run test         # vitest (run once): engine + jsdom UI-interaction tests
+bun run test:e2e     # playwright browser smoke tests (needs: bunx playwright install)
+bun run lint         # eslint
+bun run typecheck
+bun run build        # tsc + vite build → dist/
 ```
+
+Always use `bun run test`, never `bun test` — the latter invokes bun's own test
+runner, which is not Vitest. The suite is Vitest and must run via the script.
 
 Test layers: pure-engine unit tests + reference fixtures (`src/lib/tax/__tests__`),
 jsdom UI-interaction tests that drive the real React app offline

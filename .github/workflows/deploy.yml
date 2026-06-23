@@ -20,16 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm test
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run test
       # Build with the repository name as the base path so assets resolve under
       # https://<owner>.github.io/<repo>/. For a user/org page, set BASE_PATH=/.
       - name: Build
-        run: npm run build
+        run: bun run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
       # SPA-style fallback so deep links work on Pages.

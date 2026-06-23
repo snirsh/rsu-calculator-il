@@ -5,6 +5,9 @@
   "description": "Israeli RSU & ESPP after-tax calculator (Section 102 capital track).",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

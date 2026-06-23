@@ -27,13 +27,13 @@ personal data is stored or transmitted**.
 ## Quick start
 
 ```bash
-npm install
-npm run dev      # http://localhost:5173
+bun install
+bun run dev      # http://localhost:5173
 ```
 
 ```bash
-npm test         # run the tax-engine test suite
-npm run build    # production build → dist/
+bun run test     # run the tax-engine test suite
+bun run build    # production build → dist/
 ```
 
 ## Deploying to GitHub Pages

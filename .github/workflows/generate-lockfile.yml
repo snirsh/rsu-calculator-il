@@ -1,0 +1,41 @@
+name: Generate bun lockfile
+
+# One-shot helper: run this manually (Actions tab → "Run workflow") to generate
+# bun.lock on a runner with public-npm access, when your machine can't reach the
+# public registry. It uploads bun.lock as a downloadable artifact and also tries
+# to commit it back to the branch (drops the old package-lock.json).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      # No ~/.npmrc on the runner, so bun resolves from the public npm registry.
+      - run: bun install
+      # Always available, even if the commit/push below is blocked by branch rules.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bun-lockfile
+          path: bun.lock
+      - name: Commit lockfile back to the branch
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git rm --quiet --cached --ignore-unmatch package-lock.json
+          rm -f package-lock.json
+          git add bun.lock
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit."
+          else
+            git commit -m "chore: add bun.lock, drop package-lock.json"
+            git push
+          fi
