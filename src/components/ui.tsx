@@ -96,18 +96,21 @@ export function ResultRow({
   label,
   help,
   value,
+  emphasis,
   children,
 }: {
   label: string;
   help?: string;
   value: ReactNode;
+  /** Render as a bottom-line total (heavy rule, larger pine figure). */
+  emphasis?: boolean;
   /** Expandable detail revealed on click. */
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const expandable = Boolean(children);
   return (
-    <div className={`result-row${expandable ? " expandable" : ""}`}>
+    <div className={`result-row${expandable ? " expandable" : ""}${emphasis ? " emph" : ""}`}>
       <button
         type="button"
         className="result-head"

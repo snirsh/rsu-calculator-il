@@ -171,7 +171,7 @@ export function RsuCalculator({
           <ResultRow label="Bituah Leumi & health" value={ils(combined.bituah)} />
           <ResultRow label="Capital tax" value={ils(combined.capitalTax)} />
           <ResultRow label="Total net" value={ils(combined.totalNet)} />
-          <ResultRow label="Net to bank" value={money(combined.netToBank / (showInUsd ? fx : 1), showInUsd ? "USD" : "ILS")} />
+          <ResultRow label="Net to bank" value={money(combined.netToBank / (showInUsd ? fx : 1), showInUsd ? "USD" : "ILS")} emphasis />
           <ResultRow
             label={anyRefund ? "Net tax refund" : "Net to salary"}
             value={ils(combined.netToSalary)}
@@ -356,7 +356,7 @@ function GrantResults({
       <ResultRow label="Bituah Leumi & health" help="National insurance + health on the income portion, up to the ceiling." value={ils(result.bituah)} />
       <ResultRow label="Capital tax" help="Capital-gains tax on the capital portion (if 2 years passed)." value={ils(result.capitalTax)} />
       <ResultRow label="Total net" help="Gross − fees − taxes." value={ils(result.totalNet)} />
-      <ResultRow label="Net to bank" help="Amount that hits your bank on the sale day." value={money(bankVal, bankCur)}>
+      <ResultRow label="Net to bank" help="Amount that hits your bank on the sale day." value={money(bankVal, bankCur)} emphasis>
         <ResultRow label="Wire fee" value={money(showInUsd ? result.fees.wire / fx : result.fees.wire, bankCur)} />
       </ResultRow>
       <ResultRow

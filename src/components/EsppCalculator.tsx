@@ -247,11 +247,11 @@ function EsppResults({
 
       {result.withTrustee ? (
         <>
-          <ResultRow label="Net to bank" help="Your trustee transfers this within ~10 days of the sale." value={money(bankVal, bankCur)} />
+          <ResultRow label="Net to bank" help="Your trustee transfers this within ~10 days of the sale." value={money(bankVal, bankCur)} emphasis />
           <ResultRow label="Net to salary" help="Income-tax difference returned via salary, or claimable as a refund." value={ils(result.netToSalary)} />
         </>
       ) : (
-        <ResultRow label="Net to bank" help="Equals total net." value={money(bankVal, bankCur)} />
+        <ResultRow label="Net to bank" help="Equals total net." value={money(bankVal, bankCur)} emphasis />
       )}
 
       <div className="tips">

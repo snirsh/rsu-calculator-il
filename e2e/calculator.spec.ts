@@ -18,7 +18,7 @@ test("loads and shows the calculator", async ({ page }) => {
 test("RSU: manual price produces after-tax results", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("checkbox", { name: /set stock price/i }).check();
-  await page.getByLabel("Stock price (USD)").fill("635.25");
+  await page.getByLabel("Stock price (USD)").fill("200");
 
   await expect(page.getByText("Average tax deduction")).toBeVisible();
   await expect(page.getByText("Marginal tax")).toBeVisible();

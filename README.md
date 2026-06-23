@@ -51,8 +51,9 @@ the build step.
 
 See [`CLAUDE.md`](./CLAUDE.md) for architecture, and `src/lib/tax/` for the pure
 calculation engine. Tax constants live in `src/lib/tax/constants.ts` — update
-that one file each tax year. The reference examples are encoded as regression
-tests in `src/lib/tax/__tests__/examples.test.ts`.
+that one file each tax year. Worked examples — derived from first principles
+using the published statutory rates — are encoded as regression tests in
+`src/lib/tax/__tests__/examples.test.ts`.
 
 ## Disclaimer
 

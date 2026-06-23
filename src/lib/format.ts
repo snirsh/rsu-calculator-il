@@ -1,9 +1,9 @@
-/** Format an ILS amount, e.g. ₪36,826.60. */
+/** Format an ILS amount, e.g. ₪12,345.67. */
 export function ils(value: number): string {
   return `₪${num(value)}`;
 }
 
-/** Format a USD amount, e.g. $635.25. */
+/** Format a USD amount, e.g. $1,234.56. */
 export function usd(value: number): string {
   return `$${num(value)}`;
 }
@@ -21,7 +21,7 @@ export function num(value: number, decimals = 2): string {
   });
 }
 
-/** Percentage, e.g. 46.08%. */
+/** Percentage, e.g. 23.50%. */
 export function pct(fraction: number, decimals = 2): string {
   return `${(fraction * 100).toFixed(decimals)}%`;
 }

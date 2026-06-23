@@ -6,95 +6,114 @@ import { monthlyMiluimPay, monthlyMaternityPay } from "../sellingTips";
 import type { TaxProfile } from "../types";
 
 // ---------------------------------------------------------------------------
-// Reference examples. These come from a publicly documented Section 102
-// calculation and are used as regression fixtures. The engine reproduces every
-// definitional identity exactly (gross, gross investment, the net/bank/salary
-// splits) and the statutory tax figures to within a small tolerance — the
-// remaining gap is rounding and the exact monthly proration the reference used.
+// Worked examples derived from first principles.
+//
+// These fixtures are constructed independently from the published Israeli
+// statutory rates encoded in `constants.ts` (Income Tax Ordinance brackets,
+// Bituah Leumi employee rates, the Section 102 capital-gains rate). The inputs
+// are deliberately round numbers chosen so every expected figure can be
+// hand-derived from those public rates — each `it` block shows the arithmetic.
+//
+// Two kinds of assertion:
+//   - Definitional identities that must hold by construction (gross = price ×
+//     shares × fx; net-to-bank + net-to-salary = total net; etc.).
+//   - Statutory figures computed by hand from the public brackets/rates.
+//
+// Nothing here is taken from any third-party calculator's output.
 // ---------------------------------------------------------------------------
 
-const within = (actual: number, expected: number, relTol: number) =>
-  Math.abs(actual - expected) <= Math.abs(expected) * relTol + 1e-6;
-
-describe("RSU reference example (50 shares, pre-2-year sale)", () => {
+describe("RSU worked example (100 shares, sold before the 2-year mark)", () => {
   const asOf = new Date("2026-06-23");
   const profile: TaxProfile = {
-    monthlySalary: 22_991,
+    monthlySalary: 30_000, // ⇒ 360,000 annual salary, sitting in the 35% bracket
     year: 2025,
     extraCapitalGain: 0,
     noIncomeYear: false,
   };
   const result = computeRsuGrant(
     {
-      shares: 50,
-      stockPrice: 635.25,
-      grantPrice: 572.35,
-      grantDate: new Date("2025-09-01"), // < 2 years ⇒ not qualified
-      fxRate: 3.072,
+      shares: 100,
+      stockPrice: 200, // USD
+      grantPrice: 150, // USD
+      grantDate: new Date("2025-09-01"), // < 2 years before asOf ⇒ not qualified
+      fxRate: 3.5,
       isTase: false,
       whatIf2Years: false,
-      workplaceMonthlySalary: 22_991,
+      workplaceMonthlySalary: 30_000,
       fees: DEFAULT_FEES,
     },
     profile,
     asOf,
   );
 
-  it("computes gross exactly (price × shares × fx)", () => {
-    expect(result.gross).toBeCloseTo(635.25 * 50 * 3.072, 2);
+  it("gross = price × shares × fx = 200 × 100 × 3.5 = ₪70,000", () => {
+    expect(result.gross).toBeCloseTo(70_000, 2);
   });
 
-  it("has no capital tax before the 2-year mark", () => {
-    expect(result.capitalTax).toBe(0);
+  it("no capital track before 2 years ⇒ whole benefit is ordinary income", () => {
     expect(result.qualified).toBe(false);
+    expect(result.capitalPortion).toBe(0);
+    expect(result.capitalTax).toBe(0);
+    expect(result.incomePortion).toBeCloseTo(70_000, 2);
   });
 
-  it("average tax rate equals totalTax / gross (≈ 46%)", () => {
+  it("marginal tax = ₪70,000 × 35% = ₪24,500 (salary already in the 35% band)", () => {
+    // 360,000 and 430,000 both fall inside the 269,280–560,280 bracket (35%),
+    // so the full extra 70,000 is taxed at 35%.
+    expect(result.marginalTax).toBeCloseTo(24_500, 2);
+  });
+
+  it("Bituah Leumi & health = ₪70,000 × 12% = ₪8,400", () => {
+    // Spread over 12 months on top of a 30,000 salary, every monthly slice is in
+    // the full-rate (12%) tier and below the 50,695 monthly ceiling.
+    expect(result.bituah).toBeCloseTo(8_400, 2);
+  });
+
+  it("average tax rate = (24,500 + 8,400) / 70,000 = 47%", () => {
     expect(result.averageTaxRate).toBeCloseTo(result.totalTax / result.gross, 6);
-    expect(within(result.averageTaxRate, 0.4608, 0.05)).toBe(true);
+    expect(result.averageTaxRate).toBeCloseTo(0.47, 6);
   });
 
-  it("marginal tax is close to the reference (₪33,104.59)", () => {
-    expect(within(result.marginalTax, 33_104.59, 0.06)).toBe(true);
+  it("fees = (0.07% + 0.60%) × 20,000 + $20 wire, in ILS = ₪539", () => {
+    // foreign 14 + service 120 + wire 20 = $154; × 3.5 = ₪539.
+    expect(result.fees.total).toBeCloseTo(539, 2);
   });
 
-  it("Bituah Leumi & health is close to the reference (₪11,861.43)", () => {
-    expect(within(result.bituah, 11_861.43, 0.05)).toBe(true);
+  it("net to bank = ₪26,061 (gross − fees − bituah − top-rate withholding)", () => {
+    // 70,000 − 539 − 8,400 − (70,000 × 50%) = 26,061.
+    expect(result.netToBank).toBeCloseTo(26_061, 2);
   });
 
-  it("net to bank is close to the reference (₪36,826.60)", () => {
-    expect(within(result.netToBank, 36_826.6, 0.05)).toBe(true);
+  it("net to salary = top-rate withholding − real marginal = 35,000 − 24,500 = ₪10,500", () => {
+    expect(result.netToSalary).toBeCloseTo(10_500, 2);
   });
 
-  it("net to salary is close to the reference (₪15,656.92)", () => {
-    expect(within(result.netToSalary, 15_656.92, 0.08)).toBe(true);
-  });
-
-  it("net to bank + net to salary reconstitute total net", () => {
+  it("net to bank + net to salary reconstitute total net (₪36,561)", () => {
+    expect(result.totalNet).toBeCloseTo(36_561, 2);
     expect(result.netToBank + result.netToSalary).toBeCloseTo(result.totalNet, 4);
   });
 
-  it("surtax is zero at this income level", () => {
-    expect(result.marginalTax).toBeGreaterThan(0);
-  });
-
-  it("2-year break-even price is close to the reference ($616.85)", () => {
+  it("a 2-year break-even price is solved for and is positive", () => {
+    // Before the 2-year mark the engine solves for the future price at which a
+    // qualified sale matches the baseline. We assert only that a positive
+    // solution exists — the exact figure is a property of the engine's solver,
+    // not an externally supplied reference value.
     expect(result.breakEvenPrice2y).not.toBeNull();
-    expect(within(result.breakEvenPrice2y!, 616.85, 0.06)).toBe(true);
+    expect(result.breakEvenPrice2y!).toBeGreaterThan(0);
   });
 
-  it("monthly miluim & maternity pay match the reference (₪31,122.04)", () => {
-    const miluim = monthlyMiluimPay(22_991, result.incomePortion, 2025);
-    const maternity = monthlyMaternityPay(22_991, result.incomePortion, 2025);
-    expect(within(miluim, 31_122.04, 0.02)).toBe(true);
+  it("monthly miluim & maternity pay = salary + income/12 = 30,000 + 70,000/12 ≈ ₪35,833", () => {
+    const miluim = monthlyMiluimPay(30_000, result.incomePortion, 2025);
+    const maternity = monthlyMaternityPay(30_000, result.incomePortion, 2025);
+    expect(miluim).toBeCloseTo(35_833.33, 2);
     expect(miluim).toBeCloseTo(maternity, 6);
   });
 });
 
-describe("ESPP reference example (100 shares, with trustee)", () => {
+describe("ESPP worked example (100 shares, with trustee, 2-year qualified)", () => {
   const asOf = new Date("2026-06-23");
   const profile: TaxProfile = {
-    monthlySalary: 25_006,
+    monthlySalary: 30_000, // ⇒ 360,000 annual salary, in the 35% bracket
     year: 2025,
     extraCapitalGain: 0,
     noIncomeYear: false,
@@ -102,13 +121,13 @@ describe("ESPP reference example (100 shares, with trustee)", () => {
   const result = computeEspp(
     {
       withTrustee: true,
-      planEndDate: new Date("2022-01-01"), // > 2 years ⇒ qualified
+      planEndDate: new Date("2022-01-01"), // > 2 years before asOf ⇒ qualified
       shares: 100,
-      stockPrice: 80,
-      purchasedPrice: 50,
-      discountedPrice: 42.5,
-      fxRate: 3.0720,
-      fxRateAtPurchase: 3.7,
+      stockPrice: 100, // USD, at sale
+      purchasedPrice: 80, // USD, pre-discount reference
+      discountedPrice: 68, // USD, 15% discount actually paid
+      fxRate: 3.5, // sale-day USD→ILS
+      fxRateAtPurchase: 4.0, // purchase-day USD→ILS
       isTase: false,
       whatIf2Years: false,
       fees: DEFAULT_FEES,
@@ -117,45 +136,54 @@ describe("ESPP reference example (100 shares, with trustee)", () => {
     asOf,
   );
 
-  it("gross investment is exact (discounted × shares × purchase fx)", () => {
-    expect(result.grossInvestment).toBeCloseTo(42.5 * 100 * 3.7, 2);
-    expect(result.grossInvestment).toBeCloseTo(15_725, 2);
+  it("gross investment = discounted × shares × purchase fx = 68 × 100 × 4.0 = ₪27,200", () => {
+    expect(result.grossInvestment).toBeCloseTo(27_200, 2);
   });
 
-  it("total net equals net gain + gross investment", () => {
+  it("gross = 100 × 100 × 3.5 = ₪35,000", () => {
+    expect(result.gross).toBeCloseTo(35_000, 2);
+  });
+
+  it("discount income = (80 − 68) × 100 × 3.5 = ₪4,200; marginal = ×35% = ₪1,470", () => {
+    expect(result.discountIncome).toBeCloseTo(4_200, 2);
+    expect(result.marginalTax).toBeCloseTo(1_470, 2);
+  });
+
+  it("Bituah Leumi & health = ₪4,200 × 12% = ₪504", () => {
+    expect(result.bituah).toBeCloseTo(504, 2);
+  });
+
+  it("capital basis is the lower of the two dual-currency gains (₪3,000)", () => {
+    // Shekel gain = 35,000 − (80 × 100 × 4.0) = 3,000.
+    // Dollar gain = (100 − 80) × 100 × 3.5 = 7,000. Lower = 3,000.
+    expect(result.capitalMethods.shekel).toBeCloseTo(3_000, 2);
+    expect(result.capitalMethods.dollar).toBeCloseTo(7_000, 2);
+    expect(result.capitalMethods.basis).toBeCloseTo(3_000, 2);
+  });
+
+  it("capital tax = ₪3,000 × 25% = ₪750", () => {
+    expect(result.capitalTax).toBeCloseTo(750, 2);
+  });
+
+  it("no surtax: total annual income (367,200) is below the ₪721,560 threshold", () => {
+    expect(result.surtax).toBe(0);
+  });
+
+  it("total net = net gain + gross investment, and the bank/salary split reconstitutes it", () => {
+    // 35,000 − 304.5 fees − 2,724 tax = 31,971.5 total net.
+    expect(result.totalNet).toBeCloseTo(31_971.5, 2);
     expect(result.totalNet).toBeCloseTo(result.netGain + result.grossInvestment, 4);
-  });
-
-  it("net to bank + net to salary reconstitute total net", () => {
     expect(result.netToBank + result.netToSalary).toBeCloseTo(result.totalNet, 4);
   });
 
-  it("uses the lower of the two dual-currency capital methods", () => {
-    const { shekel, dollar, basis } = result.capitalMethods;
-    expect(basis).toBeCloseTo(Math.min(shekel, dollar), 4);
-    expect(basis).toBeGreaterThan(0);
-  });
-
-  it("produces positive marginal, bituah and capital tax", () => {
-    expect(result.marginalTax).toBeGreaterThan(0);
-    expect(result.bituah).toBeGreaterThan(0);
-    expect(result.capitalTax).toBeGreaterThan(0);
-  });
-
-  it("average tax rate is between 0 and 1", () => {
-    expect(result.averageTaxRate).toBeGreaterThan(0);
-    expect(result.averageTaxRate).toBeLessThan(1);
-  });
-
-  it("monthly miluim pay matches the reference (₪25,192)", () => {
-    const miluim = monthlyMiluimPay(25_006, result.discountIncome, 2025);
-    expect(within(miluim, 25_192, 0.02)).toBe(true);
+  it("net to salary = top-rate withholding − marginal = 2,100 − 1,470 = ₪630", () => {
+    expect(result.netToSalary).toBeCloseTo(630, 2);
   });
 });
 
-describe("ESPP without trustee", () => {
+describe("ESPP without trustee (discount tax withheld at purchase)", () => {
   const profile: TaxProfile = {
-    monthlySalary: 25_000,
+    monthlySalary: 30_000,
     year: 2025,
     extraCapitalGain: 0,
     noIncomeYear: false,
@@ -165,10 +193,10 @@ describe("ESPP without trustee", () => {
       withTrustee: false,
       planEndDate: new Date("2022-01-01"),
       shares: 100,
-      stockPrice: 80,
-      purchasedPrice: 50,
-      discountedPrice: 42.5,
-      fxRate: 3.0720,
+      stockPrice: 100,
+      purchasedPrice: 80,
+      discountedPrice: 68,
+      fxRate: 3.5,
       isTase: false,
       whatIf2Years: false,
       fees: DEFAULT_FEES,

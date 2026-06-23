@@ -32,7 +32,7 @@ src/lib/tax/        Pure tax engine (no React). The heart of the project.
   rsu.ts            RSU Section 102 computation + 2-year break-even.
   espp.ts           ESPP with/without trustee + dual-currency capital methods.
   sellingTips.ts    Miluim / maternity monthly pay.
-  __tests__/        Vitest unit tests, incl. the reference example fixtures.
+  __tests__/        Vitest unit tests, incl. first-principles worked examples.
 src/lib/market/     FX, quotes, symbol search (best-effort, fail-soft).
 src/components/     React UI. Pure presentation over the engine.
 public/tickers.json Offline symbol-autocomplete fallback list.
@@ -47,9 +47,11 @@ public/tickers.json Offline symbol-autocomplete fallback list.
 - Network code must **never throw to the UI** — return `null` and let the manual
   override take over.
 - Validate any engine change against `src/lib/tax/__tests__/examples.test.ts`.
-  Those fixtures encode the reference examples; identities (gross, gross
-  investment, net/bank/salary splits) must stay exact, statutory figures within
-  the documented tolerance.
+  Those fixtures are worked examples derived from first principles using the
+  published statutory rates in `constants.ts` — each `it` block shows the
+  arithmetic. Definitional identities (gross, gross investment, net/bank/salary
+  splits) and the hand-derived statutory figures must stay exact. Do not encode
+  values copied from any third-party calculator's output.
 
 ## Commands
 
@@ -69,7 +71,7 @@ bun run build        # tsc + vite build → dist/
 Always use `bun run test`, never `bun test` — the latter invokes bun's own test
 runner, which is not Vitest. The suite is Vitest and must run via the script.
 
-Test layers: pure-engine unit tests + reference fixtures (`src/lib/tax/__tests__`),
+Test layers: pure-engine unit tests + first-principles worked examples (`src/lib/tax/__tests__`),
 jsdom UI-interaction tests that drive the real React app offline
 (`src/__tests__/app.dom.test.tsx`), and Playwright e2e smoke tests in a real
 browser (`e2e/`, run by the `e2e` CI job). Browser downloads may be blocked in
@@ -85,5 +87,6 @@ with "GitHub Actions" as the source in repo settings.
 
 Figures follow published Israeli statutory rates and Section 102 mechanics. The
 exact monthly proration used by any specific commercial tool may differ slightly;
-the engine targets the reference examples within a small tolerance. This is not
-tax advice — always state that in user-facing copy.
+the engine is validated against worked examples derived from first principles
+using those public rates. This is not tax advice — always state that in
+user-facing copy.

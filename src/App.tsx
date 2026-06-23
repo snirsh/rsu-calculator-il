@@ -30,12 +30,15 @@ export function App() {
   return (
     <div className="app">
       <header className="masthead">
-        <h1>Israeli RSU &amp; ESPP Tax Calculator</h1>
-        <p>
-          Estimate your after-tax proceeds when selling RSUs or ESPP shares in
-          Israel under Section 102. Live prices &amp; FX, computed entirely in
-          your browser — no data leaves your device.
-        </p>
+        <div className="masthead-text">
+          <span className="eyebrow">Section 102 · Capital track</span>
+          <h1>Israeli RSU &amp; ESPP Tax Calculator</h1>
+          <p className="lede">
+            See what actually reaches your bank. Your RSU or ESPP sale, run
+            through every Israeli tax layer — income tax, Bituah Leumi, capital
+            gains — entirely in your browser. Nothing leaves your device.
+          </p>
+        </div>
       </header>
 
       <nav className="tabs" role="tablist">

@@ -29,12 +29,12 @@ describe("RSU calculator UI", () => {
     await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
     const price = screen.getByLabelText("Stock price (USD)");
     await user.clear(price);
-    await user.type(price, "635.25");
+    await user.type(price, "200");
 
     // Results render with gross = price × shares × fallback FX (3.7).
-    // 635.25 × 100 × 3.7 = ₪235,042.50
+    // 200 × 100 × 3.7 = ₪74,000.00
     await waitFor(() =>
-      expect(screen.getByText("₪235,042.50")).toBeInTheDocument(),
+      expect(screen.getByText("₪74,000.00")).toBeInTheDocument(),
     );
     expect(screen.getByText("Average tax deduction")).toBeInTheDocument();
     expect(screen.getByText("Total net")).toBeInTheDocument();
