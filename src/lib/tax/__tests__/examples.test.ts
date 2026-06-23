@@ -102,11 +102,19 @@ describe("RSU worked example (100 shares, sold before the 2-year mark)", () => {
     expect(result.breakEvenPrice2y!).toBeGreaterThan(0);
   });
 
-  it("monthly miluim & maternity pay = salary + income/12 = 30,000 + 70,000/12 ≈ ₪35,833", () => {
+  it("monthly miluim & maternity pay use the 3-month base, capped at the NI ceiling", () => {
+    // Both benefits derive the daily rate from the 3 months before the event
+    // (income / 90), so the monthly equivalent adds the one-time income portion
+    // spread over those 3 months: 30,000 + 70,000/3 = ₪53,333.33 uncapped.
+    // That exceeds the 2025 NI monthly ceiling (₪50,695), so the cap engages.
     const miluim = monthlyMiluimPay(30_000, result.incomePortion, 2025);
     const maternity = monthlyMaternityPay(30_000, result.incomePortion, 2025);
-    expect(miluim).toBeCloseTo(35_833.33, 2);
+    expect(miluim).toBeCloseTo(50_695, 2);
     expect(miluim).toBeCloseTo(maternity, 6);
+
+    // A smaller income portion stays below the ceiling and shows the /3 base
+    // directly: 30,000 + 30,000/3 = ₪40,000.
+    expect(monthlyMiluimPay(30_000, 30_000, 2025)).toBeCloseTo(40_000, 2);
   });
 });
 

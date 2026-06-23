@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   combineRsuGrants,
   computeRsuGrant,
@@ -8,7 +8,7 @@ import {
   type TaxProfile,
 } from "../lib/tax";
 import { fetchGrantPrice, fetchQuote } from "../lib/market/quote";
-import { ils, money, num, pct, todayIso } from "../lib/format";
+import { ils, money, num, pct, signTone, todayIso } from "../lib/format";
 import type { Settings } from "./GlobalInputs";
 import { SymbolInput } from "./SymbolInput";
 import {
@@ -17,7 +17,8 @@ import {
   resolveFees,
   type FeeOverrides,
 } from "./FeeEditor";
-import { Field, NumberInput, ResultRow, Toggle } from "./ui";
+import { AnimatedValue, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
+import { BreakdownBar } from "./Breakdown";
 
 interface Grant {
   id: string;
@@ -67,11 +68,13 @@ export function RsuCalculator({
   fx,
   grants,
   setGrants,
+  globalInputs,
 }: {
   settings: Settings;
   fx: number;
   grants: Grant[];
   setGrants: Dispatch<SetStateAction<Grant[]>>;
+  globalInputs: ReactNode;
 }) {
   const update = (id: string, patch: Partial<Grant>) =>
     setGrants((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
@@ -126,64 +129,96 @@ export function RsuCalculator({
   const anyRefund = grants.some((g) => g.changedWorkplace);
 
   return (
-    <div className="calculator">
-      {grants.map((g, i) => (
-        <GrantCard
-          key={g.id}
-          index={i}
-          grant={g}
-          result={results[i]}
-          fx={fx}
-          showInUsd={showInUsd}
-          onChange={(patch) => update(g.id, patch)}
-          onRemove={
-            grants.length > 1 ? () => setGrants(grants.filter((x) => x.id !== g.id)) : undefined
-          }
-        />
-      ))}
+    <div className="layout">
+      <div className="inputs-col">
+        {globalInputs}
+        {grants.map((g, i) => (
+          <GrantCard
+            key={g.id}
+            index={i}
+            grant={g}
+            onChange={(patch) => update(g.id, patch)}
+            onRemove={
+              grants.length > 1 ? () => setGrants(grants.filter((x) => x.id !== g.id)) : undefined
+            }
+          />
+        ))}
 
-      {grants.length < MAX_GRANTS ? (
-        <button
-          type="button"
-          className="add-grant"
-          onClick={() => setGrants([...grants, newGrant()])}
-        >
-          + Add another grant
-        </button>
-      ) : null}
+        {grants.length < MAX_GRANTS ? (
+          <button
+            type="button"
+            className="add-grant"
+            onClick={() => setGrants([...grants, newGrant()])}
+          >
+            + Add another grant
+          </button>
+        ) : null}
+      </div>
 
-      {combined && grants.length === 1 ? (
-        <section className="panel results">
-          <SellingTips incomePortion={incomePortion} settings={settings} />
-        </section>
-      ) : null}
+      <div className="results-col">
+        {valid.length === 0 ? (
+          <EmptyResults />
+        ) : (
+          <>
+            {grants.map((g, i) =>
+              results[i] ? (
+                <section className="panel results-panel" key={g.id}>
+                  {grants.length > 1 ? <h2>RSU grant {i + 1}</h2> : null}
+                  <GrantResults result={results[i]!} grant={g} fx={fx} showInUsd={showInUsd} />
+                </section>
+              ) : null,
+            )}
 
-      {combined && grants.length > 1 ? (
-        <section className="panel results">
-          <h2>Combined total</h2>
-          <ResultRow label="Gross" value={ils(combined.gross)} />
+            {combined && grants.length === 1 ? (
+              <section className="panel results-panel">
+                <SellingTips incomePortion={incomePortion} settings={settings} />
+              </section>
+            ) : null}
+
+            {combined && grants.length > 1 ? (
+              <section className="panel results-panel">
+                <h2>Combined total</h2>
+                <BreakdownBar
+            segments={[
+              { label: "Net", value: combined.totalNet, tone: "net" },
+              { label: "Income", value: combined.marginalTax, tone: "income" },
+              { label: "Bituah", value: combined.bituah, tone: "bituah" },
+              { label: "Capital", value: combined.capitalTax, tone: "capital" },
+              { label: "Fees", value: combined.gross - combined.totalNet - combined.marginalTax - combined.bituah - combined.capitalTax, tone: "fees" },
+            ]}
+          />
+          <ResultRow label="Gross" value={<AnimatedValue value={combined.gross} format={ils} />} />
           <ResultRow
             label="Average tax deduction"
             help="Total tax ÷ gross across all grants."
-            value={pct(combined.averageTaxRate)}
+            value={<AnimatedValue value={combined.averageTaxRate} format={pct} />}
           />
-          <ResultRow label="Marginal tax" value={ils(combined.marginalTax)} />
-          <ResultRow label="Bituah Leumi & health" value={ils(combined.bituah)} />
-          <ResultRow label="Capital tax" value={ils(combined.capitalTax)} />
-          <ResultRow label="Total net" value={ils(combined.totalNet)} />
-          <ResultRow label="Net to bank" value={money(combined.netToBank / (showInUsd ? fx : 1), showInUsd ? "USD" : "ILS")} emphasis />
+          <ResultRow label="Marginal tax" value={<AnimatedValue value={combined.marginalTax} format={ils} />} tone="income" />
+          <ResultRow label="Bituah Leumi & health" value={<AnimatedValue value={combined.bituah} format={ils} />} tone="bituah" />
+          <ResultRow label="Capital tax" value={<AnimatedValue value={combined.capitalTax} format={ils} />} tone="capital" />
+          <ResultRow label="Total net" value={<AnimatedValue value={combined.totalNet} format={ils} />} tone="net" />
+          <ResultRow
+            label="Net to bank"
+            value={<AnimatedValue value={combined.netToBank / (showInUsd ? fx : 1)} format={(n) => money(n, showInUsd ? "USD" : "ILS")} />}
+            emphasis
+          />
           <ResultRow
             label={anyRefund ? "Net tax refund" : "Net to salary"}
-            value={ils(combined.netToSalary)}
+            value={<AnimatedValue value={combined.netToSalary} format={ils} />}
+            tone={signTone(combined.netToSalary)}
           />
           <ResultRow
             label={combined.surtax < 0 ? "Magen Mas" : "Surtax owed"}
             help="Additional 3%/5% surtax based on annual income; negative means a loss available against future tax."
-            value={ils(Math.abs(combined.surtax))}
+            value={<AnimatedValue value={Math.abs(combined.surtax)} format={ils} />}
+            tone={combined.surtax > 0 ? "neg" : combined.surtax < 0 ? "pos" : undefined}
           />
           <SellingTips incomePortion={incomePortion} settings={settings} />
-        </section>
-      ) : null}
+              </section>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -191,17 +226,11 @@ export function RsuCalculator({
 function GrantCard({
   index,
   grant,
-  result,
-  fx,
-  showInUsd,
   onChange,
   onRemove,
 }: {
   index: number;
   grant: Grant;
-  result: RsuGrantResult | null;
-  fx: number;
-  showInUsd: boolean;
   onChange: (patch: Partial<Grant>) => void;
   onRemove?: () => void;
 }) {
@@ -316,8 +345,6 @@ function GrantCard({
       />
 
       <FeeEditor value={grant.fees} onChange={(fees) => onChange({ fees })} />
-
-      {result ? <GrantResults result={result} grant={grant} fx={fx} showInUsd={showInUsd} /> : null}
     </section>
   );
 }
@@ -340,35 +367,48 @@ function GrantResults({
   const bankCur = showInUsd ? "USD" : "ILS";
   const bankVal = showInUsd ? result.netToBank / fx : result.netToBank;
 
+  const feesShare =
+    result.gross - result.totalNet - result.marginalTax - result.bituah - result.capitalTax;
+
   return (
     <div className="results">
       <h3>Results</h3>
+      <BreakdownBar
+        segments={[
+          { label: "Net", value: result.totalNet, tone: "net" },
+          { label: "Income", value: result.marginalTax, tone: "income" },
+          { label: "Bituah", value: result.bituah, tone: "bituah" },
+          { label: "Capital", value: result.capitalTax, tone: "capital" },
+          { label: "Fees", value: feesShare, tone: "fees" },
+        ]}
+      />
       {!grant.isTase ? <ResultRow label="USD → ILS" value={`1$ = ${num(fx, 4)}₪`} /> : null}
-      <ResultRow label="Stock price" value={money(effPrice, cur)} />
-      <ResultRow label="Grant price" help="30-working-day average before the grant date — the income/capital split basis." value={money(grantPrice, cur)} />
-      <ResultRow label="Gross" help="Sale value before tax: price × shares × fx." value={ils(result.gross)}>
-        <ResultRow label="Foreign fee" value={ils(result.fees.foreign)} />
-        <ResultRow label="Service fee" value={ils(result.fees.service)} />
-        <ResultRow label="After-fee gross" value={ils(result.fees.afterFeeGross)} />
+      <ResultRow label="Stock price" value={<AnimatedValue value={effPrice} format={(n) => money(n, cur)} />} />
+      <ResultRow label="Grant price" help="30-working-day average before the grant date — the income/capital split basis." value={<AnimatedValue value={grantPrice} format={(n) => money(n, cur)} />} />
+      <ResultRow label="Gross" help="Sale value before tax: price × shares × fx." value={<AnimatedValue value={result.gross} format={ils} />}>
+        <ResultRow label="Foreign fee" value={<AnimatedValue value={result.fees.foreign} format={ils} />} />
+        <ResultRow label="Service fee" value={<AnimatedValue value={result.fees.service} format={ils} />} />
+        <ResultRow label="After-fee gross" value={<AnimatedValue value={result.fees.afterFeeGross} format={ils} />} />
       </ResultRow>
-      <ResultRow label="Average tax deduction" help="Total tax ÷ gross." value={pct(result.averageTaxRate)} />
-      <ResultRow label="Marginal tax" help="Income tax on the revenue portion at your bracket." value={ils(result.marginalTax)} />
-      <ResultRow label="Bituah Leumi & health" help="National insurance + health on the income portion, up to the ceiling." value={ils(result.bituah)} />
-      <ResultRow label="Capital tax" help="Capital-gains tax on the capital portion (if 2 years passed)." value={ils(result.capitalTax)} />
-      <ResultRow label="Total net" help="Gross − fees − taxes." value={ils(result.totalNet)} />
-      <ResultRow label="Net to bank" help="Amount that hits your bank on the sale day." value={money(bankVal, bankCur)} emphasis>
-        <ResultRow label="Wire fee" value={money(showInUsd ? result.fees.wire / fx : result.fees.wire, bankCur)} />
+      <ResultRow label="Average tax deduction" help="Total tax ÷ gross." value={<AnimatedValue value={result.averageTaxRate} format={pct} />} />
+      <ResultRow label="Marginal tax" help="Income tax on the revenue portion at your bracket." value={<AnimatedValue value={result.marginalTax} format={ils} />} tone="income" />
+      <ResultRow label="Bituah Leumi & health" help="National insurance + health on the income portion, up to the ceiling." value={<AnimatedValue value={result.bituah} format={ils} />} tone="bituah" />
+      <ResultRow label="Capital tax" help="Capital-gains tax on the capital portion (if 2 years passed)." value={<AnimatedValue value={result.capitalTax} format={ils} />} tone="capital" />
+      <ResultRow label="Total net" help="Gross − fees − taxes." value={<AnimatedValue value={result.totalNet} format={ils} />} tone="net" />
+      <ResultRow label="Net to bank" help="Amount that hits your bank on the sale day." value={<AnimatedValue value={bankVal} format={(n) => money(n, bankCur)} />} emphasis>
+        <ResultRow label="Wire fee" value={<AnimatedValue value={showInUsd ? result.fees.wire / fx : result.fees.wire} format={(n) => money(n, bankCur)} />} />
       </ResultRow>
       <ResultRow
         label={result.isRefund ? "Net tax refund" : "Net to salary"}
         help="Income-tax difference returned via salary, or claimable as a refund if you left the employer."
-        value={ils(result.netToSalary)}
+        value={<AnimatedValue value={result.netToSalary} format={ils} />}
+        tone={signTone(result.netToSalary)}
       />
       {result.breakEvenPrice2y !== null ? (
         <ResultRow
           label="2 years break-even stock price"
           help="The future price where waiting to the 2-year mark yields the same net as selling now."
-          value={money(result.breakEvenPrice2y, cur)}
+          value={<AnimatedValue value={result.breakEvenPrice2y} format={(n) => money(n, cur)} />}
         />
       ) : null}
     </div>
@@ -388,8 +428,8 @@ function SellingTips({
   return (
     <div className="tips">
       <h3>Selling tips</h3>
-      <ResultRow label="Monthly miluim pay (gross)" help="Gross monthly reserve-duty pay based on your post-sale salary base." value={ils(miluim)} />
-      <ResultRow label="Monthly maternity pay (gross)" help="Gross monthly maternity pay; full 105-day entitlement is this × 3.5." value={ils(maternity)} />
+      <ResultRow label="Monthly miluim pay (gross)" help="Gross monthly reserve-duty pay. Bituah Leumi bases it on your income in the 3 months before the call-up, so a one-time sale lifts it by the income portion ÷ 3 (capped at the NI ceiling)." value={<AnimatedValue value={miluim} format={ils} />} />
+      <ResultRow label="Monthly maternity pay (gross)" help="Gross monthly maternity pay; full 105-day entitlement is this × 3.5." value={<AnimatedValue value={maternity} format={ils} />} />
     </div>
   );
 }

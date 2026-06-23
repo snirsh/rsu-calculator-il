@@ -27,6 +27,12 @@ export function App() {
       ? Number(settings.fxOverride)
       : fxLive;
 
+  // Shared "General inputs" — rendered into the left input column of whichever
+  // calculator tab is active, so all inputs live on one side on desktop.
+  const globalInputs = (
+    <GlobalInputs settings={settings} onChange={setSettings} fxLive={fxLive} fxIsLive={fxIsLive} />
+  );
+
   return (
     <div className="app">
       <header className="masthead">
@@ -53,15 +59,23 @@ export function App() {
         </button>
       </nav>
 
-      {tab !== "explanation" ? (
-        <GlobalInputs settings={settings} onChange={setSettings} fxLive={fxLive} fxIsLive={fxIsLive} />
-      ) : null}
-
       {tab === "rsu" ? (
-        <RsuCalculator settings={settings} fx={fx} grants={grants} setGrants={setGrants} />
+        <RsuCalculator
+          settings={settings}
+          fx={fx}
+          grants={grants}
+          setGrants={setGrants}
+          globalInputs={globalInputs}
+        />
       ) : null}
       {tab === "espp" ? (
-        <EsppCalculator settings={settings} fx={fx} plan={espp} setPlan={setEspp} />
+        <EsppCalculator
+          settings={settings}
+          fx={fx}
+          plan={espp}
+          setPlan={setEspp}
+          globalInputs={globalInputs}
+        />
       ) : null}
       {tab === "explanation" ? <Explanation /> : null}
 

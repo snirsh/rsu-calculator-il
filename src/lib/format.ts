@@ -30,3 +30,22 @@ export function pct(fraction: number, decimals = 2): string {
 export function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+/**
+ * A colour key shared by the breakdown bar, its legend, and the statement rows.
+ * "pos"/"neg" are sign tones; the rest name a breakdown category.
+ */
+export type Tone =
+  | "pos"
+  | "neg"
+  | "net"
+  | "income"
+  | "bituah"
+  | "capital"
+  | "invest"
+  | "fees";
+
+/** Sign-based tone for a signed figure: a gain/credit (+), a loss/owed (−), or none. */
+export function signTone(value: number): "pos" | "neg" | undefined {
+  return value > 0 ? "pos" : value < 0 ? "neg" : undefined;
+}

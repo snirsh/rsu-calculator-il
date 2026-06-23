@@ -100,7 +100,10 @@ export function computeRsuGrant(
   let incomePortion: number;
   let capitalPortion: number;
   if (qualified) {
-    incomePortion = grantValueIls;
+    // The grant-date value is ordinary income, but never more than the actual
+    // proceeds: if the share fell below the grant-date average, all proceeds are
+    // ordinary income and the shortfall is a capital loss, not extra income.
+    incomePortion = Math.min(grantValueIls, gross);
     capitalPortion = Math.max(0, gross - grantValueIls);
   } else {
     // No capital track: the whole benefit is ordinary income.
